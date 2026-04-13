@@ -129,6 +129,20 @@ pub enum MediaType {
     File,
 }
 
+/// Voice encoding types (matching WeChat encode_type values).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize_repr, Deserialize_repr)]
+#[repr(i32)]
+pub enum VoiceEncodeType {
+    Pcm = 1,
+    Adpcm = 2,
+    Feature = 3,
+    Speex = 4,
+    Amr = 5,
+    Silk = 6,
+    Mp3 = 7,
+    OggSpeex = 8,
+}
+
 // ── BaseInfo ────────────────────────────────────────────────────────
 
 /// Metadata attached to every outgoing API request.

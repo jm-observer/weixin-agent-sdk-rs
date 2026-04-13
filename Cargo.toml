@@ -13,6 +13,7 @@ keywords = ["weixin", "wechat", "bot", "ilink", "agent"]
 categories = ["api-bindings", "asynchronous"]
 
 [dependencies]
+silk-rs = { version = "0.2", optional = true }
 regex = "1"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", features = ["json"] }
@@ -32,6 +33,9 @@ dashmap = "6"
 tokio-util = { version = "0.7", features = ["rt"] }
 url = "2"
 urlencoding = "2"
+
+[features]
+voice-transcode = ["silk-rs"]
 
 [dev-dependencies]
 anyhow = "1"

@@ -7,6 +7,7 @@ use std::sync::Arc;
 use dashmap::DashMap;
 
 use crate::error::Result;
+use crate::media::voice_transcode;
 use crate::types::{
     CdnMedia, MediaType, MessageItem, MessageItemType, MessageState, MessageType,
     SendTypingRequest, TypingStatus, WeixinMessage, build_base_info,
@@ -106,7 +107,8 @@ impl MessageContext {
 
     /// Download media from this message to a destination path.
     pub async fn download_media(&self, media: &MediaInfo, dest: &Path) -> Result<PathBuf> {
-        let data = if let Some(aes_key) = &media.aes_key_base64 {
+        // Retrieve raw media data (decrypted if needed).
+        let raw_data = if let Some(aes_key) = &media.aes_key_base64 {
             let cdn_media = media
                 .cdn_media
                 .as_ref()
@@ -123,6 +125,17 @@ impl MessageContext {
             return Err(crate::error::Error::CdnUpload(
                 "no media source available".into(),
             ));
+        };
+        // If this is a voice message, attempt SILK→WAV transcode.
+        let data = if media.media_type == crate::types::MediaType::Voice && crate::media::voice_transcode::is_silk_format(&raw_data) {
+            if let Some(res) = crate::media::voice_transcode::silk_to_wav(&raw_data).await {
+                res.data
+            } else {
+                // Fallback to original data on failure.
+                raw_data
+            }
+        } else {
+            raw_data
         };
         tokio::fs::write(dest, &data).await?;
         Ok(dest.to_path_buf())

@@ -97,7 +97,24 @@ pub async fn send_text(
         .await
     }
 
+    /// Send a remote media URL: download to temp, send, then clean up.
+    pub async fn send_remote_media(
+        &self,
+        to: &str,
+        url: &str,
+        context_token: Option<&str>,
+    ) -> Result<SendResult> {
+        // Download to temporary location.
+        let temp_path = crate::media::remote_download::download_remote_file_to_temp(url).await?;
+        // Send the media.
+        let result = self.send_media(to, &temp_path, context_token).await;
+        // Clean up temporary file regardless of send result.
+        let _ = tokio::fs::remove_file(&temp_path).await;
+        result
+    }
+
     /// Get a QR login API handle.
+
     pub fn qr_login(&self) -> QrLoginApi<'_> {
         QrLoginApi::new(&self.api)
     }
