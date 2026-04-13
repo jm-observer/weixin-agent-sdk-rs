@@ -21,3 +21,4 @@ examples/secret.toml
 # Test artifacts
 *.log
 refs/
+npm

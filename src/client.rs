@@ -65,13 +65,18 @@ impl WeixinClient {
     }
 
     /// Send a text message to a user.
-    pub async fn send_text(
+pub async fn send_text(
         &self,
         to: &str,
         text: &str,
         context_token: Option<&str>,
     ) -> Result<SendResult> {
-        crate::messaging::send::send_text(&self.api, to, text, context_token).await
+        let filtered = if self.config.filter_markdown {
+            crate::messaging::markdown_filter::StreamingMarkdownFilter::filter(text)
+        } else {
+            text.to_string()
+        };
+        crate::messaging::send::send_text(&self.api, to, &filtered, context_token).await
     }
 
     /// Send a media file to a user.

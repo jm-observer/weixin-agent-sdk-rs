@@ -145,6 +145,18 @@ impl MessageContext {
     }
 
     /// Cancel the typing indicator.
+
+    /// Send an error notice (fire-and-forget).
+    pub async fn send_error_notice(&self, kind: crate::messaging::error_notice::ErrorNoticeKind, detail: &str) {
+        crate::messaging::error_notice::send_error_notice(
+            &self.sender.api,
+            &self.from,
+            kind,
+            detail,
+            self.context_token.as_deref(),
+        )
+        .await;
+    }
     pub async fn cancel_typing(&self) -> Result<()> {
         let ticket = self
             .sender

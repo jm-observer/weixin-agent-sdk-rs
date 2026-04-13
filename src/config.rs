@@ -16,6 +16,10 @@ pub const DEFAULT_API_TIMEOUT: Duration = Duration::from_millis(15_000);
 /// SDK protocol configuration — no persistence paths.
 #[derive(Debug, Clone)]
 pub struct WeixinConfig {
+    /// Enable markdown filtering.
+    pub filter_markdown: bool,
+    /// Enable automatic error notices.
+    pub send_error_notices: bool,
     /// iLink API base URL.
     pub base_url: String,
     /// CDN base URL.
@@ -34,6 +38,8 @@ pub struct WeixinConfig {
 #[derive(Debug, Default)]
 #[must_use]
 pub struct WeixinConfigBuilder {
+    filter_markdown: Option<bool>,
+    send_error_notices: Option<bool>,
     base_url: Option<String>,
     cdn_base_url: Option<String>,
     token: Option<String>,
@@ -86,6 +92,18 @@ impl WeixinConfigBuilder {
         self
     }
 
+    /// Enable or disable markdown filtering (default: true).
+    pub fn filter_markdown(mut self, enabled: bool) -> Self {
+        self.filter_markdown = Some(enabled);
+        self
+    }
+
+    /// Enable or disable automatic error notices (default: true).
+    pub fn send_error_notices(mut self, enabled: bool) -> Self {
+        self.send_error_notices = Some(enabled);
+        self
+    }
+
     /// Build the config. Returns an error if `token` is missing.
     pub fn build(self) -> Result<WeixinConfig> {
         let token = self
@@ -100,6 +118,8 @@ impl WeixinConfigBuilder {
             route_tag: self.route_tag,
             long_poll_timeout: self.long_poll_timeout.unwrap_or(DEFAULT_LONG_POLL_TIMEOUT),
             api_timeout: self.api_timeout.unwrap_or(DEFAULT_API_TIMEOUT),
+            filter_markdown: self.filter_markdown.unwrap_or(true),
+            send_error_notices: self.send_error_notices.unwrap_or(true),
         })
     }
 }

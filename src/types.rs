@@ -8,7 +8,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
 /// iLink-App-Id header value.
 pub const ILINK_APP_ID: &str = "bot";
 /// Channel version sent in `base_info`.
-pub const CHANNEL_VERSION: &str = "2.1.1";
+pub const CHANNEL_VERSION: &str = "2.1.8";
 /// Fixed QR code base URL.
 pub const QR_CODE_BASE_URL: &str = "https://ilinkai.weixin.qq.com/";
 /// Default bot type for QR login.

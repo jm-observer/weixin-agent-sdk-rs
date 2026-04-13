@@ -1,6 +1,6 @@
 [package]
 name = "weixin-agent"
-version = "0.1.0"
+version = "2.1.8"
 edition = "2024"
 rust-version = "1.85.0"
 description = "Pure protocol SDK for Weixin iLink Bot API — iLink AI Bot protocol, not coupled with OpenClaw"
@@ -13,6 +13,7 @@ keywords = ["weixin", "wechat", "bot", "ilink", "agent"]
 categories = ["api-bindings", "asynchronous"]
 
 [dependencies]
+regex = "1"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.12", features = ["json"] }
 serde = { version = "1", features = ["derive"] }
