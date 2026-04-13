@@ -18,6 +18,7 @@ use crate::qr_login::login::QrLoginApi;
 pub struct WeixinClient {
     config: Arc<WeixinConfig>,
     handler: Arc<dyn MessageHandler>,
+    debug_mode: Arc<crate::messaging::debug_mode::DebugMode>,
     api: Arc<HttpApiClient>,
     session_guard: Arc<SessionGuard>,
     config_cache: Arc<ConfigCache>,
@@ -52,10 +53,12 @@ impl WeixinClient {
             Arc::clone(&self.session_guard),
             Arc::clone(&self.config_cache),
             Arc::clone(&self.context_tokens),
+            Arc::clone(&self.debug_mode),
             initial_sync_buf,
             self.config.long_poll_timeout,
             self.cancel.clone(),
         )
+
         .await
     }
 
@@ -140,6 +143,7 @@ impl WeixinClientBuilder {
         let api = Arc::new(HttpApiClient::new(&self.config));
         let config_cache = Arc::new(ConfigCache::new(Arc::clone(&api)));
         Ok(WeixinClient {
+            debug_mode: Arc::new(crate::messaging::debug_mode::DebugMode::new()),
             config: Arc::new(self.config),
             handler,
             api,

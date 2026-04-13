@@ -46,6 +46,7 @@ pub(crate) async fn run_monitor(
     session_guard: Arc<SessionGuard>,
     config_cache: Arc<ConfigCache>,
     context_tokens: Arc<ContextTokenStore>,
+    debug_mode: Arc<crate::messaging::debug_mode::DebugMode>,
     initial_sync_buf: Option<String>,
     initial_timeout: Duration,
     cancel: CancellationToken,
@@ -136,7 +137,7 @@ pub(crate) async fn run_monitor(
                 errcode = resp.errcode,
                 errmsg = resp.errmsg.as_deref().unwrap_or(""),
                 failures = consecutive_failures,
-                "getUpdates API error"
+                msg = "getUpdates API error",
             );
             if consecutive_failures >= MAX_CONSECUTIVE_FAILURES {
                 consecutive_failures = 0;
@@ -175,7 +176,48 @@ pub(crate) async fn run_monitor(
                 context_tokens.set(from, token);
             }
 
-            let ctx = inbound::parse_inbound_message(msg, Arc::clone(&sender));
+            // Record reception time
+            let received_now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64;
+            // Initialise timing record
+            let mut timing = crate::messaging::debug_mode::MessageTiming {
+                event_timestamp_ms: msg.create_time_ms.unwrap_or(0),
+                received_at_ms: received_now,
+                inbound_done_ms: None,
+                reply_done_ms: None,
+            };
+            // Parse inbound with timing info
+            let ctx = inbound::parse_inbound_message(msg, Arc::clone(&sender), timing.clone());
+            // Mark inbound processing done
+            let inbound_done = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64;
+            // Update timing in context (we have mutable ctx? it's immutable). Instead, we will pass timing to slash handling before calling handler.
+            // First, attempt slash command handling
+            let slash_result = crate::messaging::slash_commands::handle_slash_command(
+                ctx.body.as_deref().unwrap_or(""),
+                &ctx,
+                &debug_mode,
+                &timing,
+            ).await;
+            if slash_result == crate::messaging::slash_commands::SlashCommandResult::Handled {
+                // Record reply done time (reply already sent inside slash handler)
+                timing.reply_done_ms = Some(std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as u64);
+                // If debug mode enabled, send timing report
+                if debug_mode.is_enabled() {
+                    let _ = ctx.reply_text(&timing.format_report()).await;
+                }
+                continue;
+            }
+            // Record inbound processing done before invoking handler
+            timing.inbound_done_ms = Some(inbound_done);
+            // Not a slash command – proceed with normal handler
             if let Err(e) = handler.on_message(&ctx).await {
                 tracing::error!(
                     error = %e,
@@ -183,7 +225,17 @@ pub(crate) async fn run_monitor(
                     message_id = %ctx.message_id,
                     "on_message handler error"
                 );
+            }            // After handler completes, record reply done time (approx now)
+            timing.reply_done_ms = Some(std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64);
+            // If debug mode enabled, send report
+            if debug_mode.is_enabled() {
+                let _ = ctx.reply_text(&timing.format_report()).await;
             }
+
+
         }
     }
 

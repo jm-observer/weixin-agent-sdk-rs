@@ -30,6 +30,8 @@ pub struct WeixinConfig {
     pub route_tag: Option<u32>,
     /// Long-poll timeout for `getUpdates`.
     pub long_poll_timeout: Duration,
+    /// Enable slash command handling (default true).
+    pub enable_slash_commands: bool,
     /// Timeout for regular API calls.
     pub api_timeout: Duration,
 }
@@ -45,6 +47,7 @@ pub struct WeixinConfigBuilder {
     token: Option<String>,
     route_tag: Option<u32>,
     long_poll_timeout: Option<Duration>,
+    enable_slash_commands: Option<bool>,
     api_timeout: Option<Duration>,
 }
 
@@ -104,6 +107,12 @@ impl WeixinConfigBuilder {
         self
     }
 
+    /// Enable or disable slash command handling (default: true).
+    pub fn enable_slash_commands(mut self, enabled: bool) -> Self {
+        self.enable_slash_commands = Some(enabled);
+        self
+    }
+
     /// Build the config. Returns an error if `token` is missing.
     pub fn build(self) -> Result<WeixinConfig> {
         let token = self
@@ -120,6 +129,7 @@ impl WeixinConfigBuilder {
             api_timeout: self.api_timeout.unwrap_or(DEFAULT_API_TIMEOUT),
             filter_markdown: self.filter_markdown.unwrap_or(true),
             send_error_notices: self.send_error_notices.unwrap_or(true),
+            enable_slash_commands: self.enable_slash_commands.unwrap_or(true),
         })
     }
 }

@@ -56,6 +56,8 @@ pub struct MessageSender {
 
 /// Inbound message context passed to the handler.
 pub struct MessageContext {
+    /// Debug timing info
+    pub timing: crate::messaging::debug_mode::MessageTiming,
     /// SDK-generated message session ID.
     pub message_id: String,
     /// Server-assigned message ID.
@@ -402,11 +404,12 @@ pub fn should_process(msg: &WeixinMessage) -> bool {
 }
 
 /// Parse a raw `WeixinMessage` into a `MessageContext`.
-pub fn parse_inbound_message(msg: &WeixinMessage, sender: Arc<MessageSender>) -> MessageContext {
+pub fn parse_inbound_message(msg: &WeixinMessage, sender: Arc<MessageSender>, timing: crate::messaging::debug_mode::MessageTiming) -> MessageContext {
     let items = msg.item_list.as_deref().unwrap_or(&[]);
     let body = body_from_item_list(items);
 
-    MessageContext {
+        MessageContext {
+            timing,
         message_id: generate_id("weixin-agent"),
         server_message_id: msg.message_id,
         from: msg.from_user_id.clone().unwrap_or_default(),
