@@ -53,3 +53,7 @@ path = "examples/echo_bot.rs"
 [[example]]
 name = "e2e_test"
 path = "examples/e2e_test.rs"
+
+[[example]]
+name = "qr_demo"
+path = "examples/qr_demo.rs"
