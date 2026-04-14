@@ -1,6 +1,6 @@
 //! Voice transcode utilities: SILK -> WAV
 
-use crate::error::Result;
+
 
 /// Result of a transcode operation.
 pub struct TranscodeResult {
@@ -39,6 +39,7 @@ pub async fn silk_to_wav(_silk_data: &[u8]) -> Option<TranscodeResult> {
 }
 
 // Helper: convert raw PCM (little-endian i16) to a WAV container.
+#[allow(dead_code)]
 fn pcm_to_wav(pcm: &[u8], sample_rate: i32, bits_per_sample: i32, channels: i16) -> Vec<u8> {
     let data_len = pcm.len() as u32;
     let byte_rate = sample_rate as u32 * channels as u32 * (bits_per_sample as u32 / 8);

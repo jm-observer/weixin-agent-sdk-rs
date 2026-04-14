@@ -7,7 +7,7 @@ use std::sync::Arc;
 use dashmap::DashMap;
 
 use crate::error::Result;
-use crate::media::voice_transcode;
+
 use crate::types::{
     CdnMedia, MediaType, MessageItem, MessageItemType, MessageState, MessageType,
     SendTypingRequest, TypingStatus, WeixinMessage, build_base_info,

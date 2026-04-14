@@ -37,7 +37,7 @@ fn ensure_trailing_slash(url: &str) -> String {
 }
 
 /// Low-level HTTP client for all iLink Bot API endpoints.
-pub(crate) struct HttpApiClient {
+pub struct HttpApiClient {
     base_url: String,
     token: String,
     route_tag: Option<u32>,
