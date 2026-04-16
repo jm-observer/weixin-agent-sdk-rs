@@ -115,14 +115,10 @@ impl WeixinConfigBuilder {
 
     /// Build the config. Returns an error if `token` is missing.
     pub fn build(self) -> Result<WeixinConfig> {
-        let token = self
-            .token
-            .ok_or_else(|| Error::Config("token is required".into()))?;
+        let token = self.token.ok_or_else(|| Error::Config("token is required".into()))?;
         Ok(WeixinConfig {
             base_url: self.base_url.unwrap_or_else(|| DEFAULT_BASE_URL.to_owned()),
-            cdn_base_url: self
-                .cdn_base_url
-                .unwrap_or_else(|| DEFAULT_CDN_BASE_URL.to_owned()),
+            cdn_base_url: self.cdn_base_url.unwrap_or_else(|| DEFAULT_CDN_BASE_URL.to_owned()),
             token,
             route_tag: self.route_tag,
             long_poll_timeout: self.long_poll_timeout.unwrap_or(DEFAULT_LONG_POLL_TIMEOUT),

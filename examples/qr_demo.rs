@@ -11,9 +11,7 @@
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     // Initialise a minimal logger so that any internal logs are shown.
-    tracing_subscriber::fmt()
-        .with_env_filter("info")
-        .init();
+    tracing_subscriber::fmt().with_env_filter("info").init();
 
     // Build a configuration without a token – the QR login does not need a
     // pre‑existing token.

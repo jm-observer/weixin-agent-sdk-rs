@@ -1,7 +1,5 @@
 //! Voice transcode utilities: SILK -> WAV
 
-
-
 /// Result of a transcode operation.
 pub struct TranscodeResult {
     /// Transcoded audio data (WAV format).
@@ -18,7 +16,7 @@ pub fn is_silk_format(data: &[u8]) -> bool {
 
 /// Convert SILK data to WAV. Returns None if transcoding is unavailable or fails.
 #[cfg(feature = "voice-transcode")]
-pub async fn silk_to_wav(silk_data: &[u8]) -> Option<TranscodeResult> {
+pub fn silk_to_wav(silk_data: &[u8]) -> Option<TranscodeResult> {
     // Decode SILK to PCM using the silk-rs crate.
     let pcm = match silk_rs::decode_silk(silk_data, 24000) {
         Ok(p) => p,
@@ -34,16 +32,26 @@ pub async fn silk_to_wav(silk_data: &[u8]) -> Option<TranscodeResult> {
 
 /// Stub when feature is disabled.
 #[cfg(not(feature = "voice-transcode"))]
-pub async fn silk_to_wav(_silk_data: &[u8]) -> Option<TranscodeResult> {
+pub fn silk_to_wav(_silk_data: &[u8]) -> Option<TranscodeResult> {
     None
 }
 
 // Helper: convert raw PCM (little-endian i16) to a WAV container.
 #[allow(dead_code)]
 fn pcm_to_wav(pcm: &[u8], sample_rate: i32, bits_per_sample: i32, channels: i16) -> Vec<u8> {
-    let data_len = pcm.len() as u32;
-    let byte_rate = sample_rate as u32 * channels as u32 * (bits_per_sample as u32 / 8);
-    let block_align = channels as u16 * (bits_per_sample as u16 / 8);
+    let data_len = u32::try_from(pcm.len()).unwrap_or(0);
+    // Use u32 for calculations to avoid overflow
+    let sr = u32::try_from(sample_rate).unwrap_or(0);
+    let ch = u32::try_from(channels).unwrap_or(0);
+    let bps = u32::try_from(bits_per_sample).unwrap_or(0);
+
+    let byte_rate = sr.checked_mul(ch).and_then(|v| v.checked_mul(bps / 8)).unwrap_or(0);
+
+    let block_align = u16::try_from(ch)
+        .unwrap_or(0)
+        .checked_mul(u16::try_from(bps / 8).unwrap_or(0))
+        .unwrap_or(0);
+
     let mut wav = Vec::with_capacity(44 + pcm.len());
     // RIFF header
     wav.extend_from_slice(b"RIFF");
@@ -57,7 +65,7 @@ fn pcm_to_wav(pcm: &[u8], sample_rate: i32, bits_per_sample: i32, channels: i16)
     wav.extend_from_slice(&sample_rate.to_le_bytes());
     wav.extend_from_slice(&byte_rate.to_le_bytes());
     wav.extend_from_slice(&block_align.to_le_bytes());
-    wav.extend_from_slice(&(bits_per_sample as u16).to_le_bytes());
+    wav.extend_from_slice(&u16::try_from(bps).unwrap_or(0).to_le_bytes());
     // data subchunk
     wav.extend_from_slice(b"data");
     wav.extend_from_slice(&data_len.to_le_bytes());

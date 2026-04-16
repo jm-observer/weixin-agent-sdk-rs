@@ -35,11 +35,7 @@ async fn fetch_bytes(url: &str) -> Result<Vec<u8>> {
 /// Download and AES-128-ECB decrypt a CDN media file.
 ///
 /// `aes_key_base64` is the `CdnMedia.aes_key` field (see [`aes_ecb::parse_aes_key`] for formats).
-pub async fn download_and_decrypt(
-    cdn_base_url: &str,
-    media: &CdnMedia,
-    aes_key_base64: &str,
-) -> Result<Vec<u8>> {
+pub async fn download_and_decrypt(cdn_base_url: &str, media: &CdnMedia, aes_key_base64: &str) -> Result<Vec<u8>> {
     let key = aes_ecb::parse_aes_key(aes_key_base64)?;
     let url = resolve_cdn_download_url(cdn_base_url, media)
         .ok_or_else(|| Error::CdnUpload("no download URL available".into()))?;

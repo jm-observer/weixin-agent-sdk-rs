@@ -23,11 +23,7 @@ pub fn build_cdn_download_url(cdn_base_url: &str, encrypted_query_param: &str) -
 }
 
 /// Upload an encrypted buffer to the CDN. Returns the `x-encrypted-param` download parameter.
-pub async fn upload_buffer_to_cdn(
-    plaintext: &[u8],
-    aes_key: &[u8; 16],
-    cdn_url: &str,
-) -> Result<String> {
+pub async fn upload_buffer_to_cdn(plaintext: &[u8], aes_key: &[u8; 16], cdn_url: &str) -> Result<String> {
     let ciphertext = aes_ecb::encrypt(plaintext, aes_key)?;
     tracing::debug!(
         url = redact::redact_url(cdn_url),
@@ -76,8 +72,7 @@ pub async fn upload_buffer_to_cdn(
         }
     }
 
-    Err(last_error
-        .unwrap_or_else(|| Error::CdnUpload(format!("failed after {UPLOAD_MAX_RETRIES} attempts"))))
+    Err(last_error.unwrap_or_else(|| Error::CdnUpload(format!("failed after {UPLOAD_MAX_RETRIES} attempts"))))
 }
 
 #[cfg(test)]

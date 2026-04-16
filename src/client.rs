@@ -36,10 +36,7 @@ pub struct WeixinClientBuilder {
 impl WeixinClient {
     /// Create a new builder.
     pub fn builder(config: WeixinConfig) -> WeixinClientBuilder {
-        WeixinClientBuilder {
-            config,
-            handler: None,
-        }
+        WeixinClientBuilder { config, handler: None }
     }
 
     /// Start the long-poll monitor loop. Blocks until shutdown.
@@ -58,7 +55,6 @@ impl WeixinClient {
             self.config.long_poll_timeout,
             self.cancel.clone(),
         )
-
         .await
     }
 
@@ -68,12 +64,7 @@ impl WeixinClient {
     }
 
     /// Send a text message to a user.
-pub async fn send_text(
-        &self,
-        to: &str,
-        text: &str,
-        context_token: Option<&str>,
-    ) -> Result<SendResult> {
+    pub async fn send_text(&self, to: &str, text: &str, context_token: Option<&str>) -> Result<SendResult> {
         let filtered = if self.config.filter_markdown {
             crate::messaging::markdown_filter::StreamingMarkdownFilter::filter(text)
         } else {
@@ -83,12 +74,7 @@ pub async fn send_text(
     }
 
     /// Send a media file to a user.
-    pub async fn send_media(
-        &self,
-        to: &str,
-        file_path: &Path,
-        context_token: Option<&str>,
-    ) -> Result<SendResult> {
+    pub async fn send_media(&self, to: &str, file_path: &Path, context_token: Option<&str>) -> Result<SendResult> {
         crate::messaging::send_media::send_media_file(
             &self.api,
             &self.config.cdn_base_url,
@@ -101,12 +87,7 @@ pub async fn send_text(
     }
 
     /// Send a remote media URL: download to temp, send, then clean up.
-    pub async fn send_remote_media(
-        &self,
-        to: &str,
-        url: &str,
-        context_token: Option<&str>,
-    ) -> Result<SendResult> {
+    pub async fn send_remote_media(&self, to: &str, url: &str, context_token: Option<&str>) -> Result<SendResult> {
         // Download to temporary location.
         let temp_path = crate::media::remote_download::download_remote_file_to_temp(url).await?;
         // Send the media.
@@ -117,7 +98,6 @@ pub async fn send_text(
     }
 
     /// Get a QR login API handle.
-
     pub fn qr_login(&self) -> QrLoginApi<'_> {
         QrLoginApi::new(&self.api)
     }

@@ -9,8 +9,8 @@ use dashmap::DashMap;
 use crate::error::Result;
 
 use crate::types::{
-    CdnMedia, MediaType, MessageItem, MessageItemType, MessageState, MessageType,
-    SendTypingRequest, TypingStatus, WeixinMessage, build_base_info,
+    CdnMedia, MediaType, MessageItem, MessageItemType, MessageState, MessageType, SendTypingRequest, TypingStatus,
+    WeixinMessage, build_base_info,
 };
 use crate::util::random::generate_id;
 
@@ -85,13 +85,7 @@ pub struct MessageContext {
 impl MessageContext {
     /// Reply with a text message.
     pub async fn reply_text(&self, text: &str) -> Result<SendResult> {
-        crate::messaging::send::send_text(
-            &self.sender.api,
-            &self.from,
-            text,
-            self.context_token.as_deref(),
-        )
-        .await
+        crate::messaging::send::send_text(&self.sender.api, &self.from, text, self.context_token.as_deref()).await
     }
 
     /// Reply with a media file.
@@ -115,22 +109,17 @@ impl MessageContext {
                 .cdn_media
                 .as_ref()
                 .ok_or_else(|| crate::error::Error::CdnUpload("no cdn_media".into()))?;
-            crate::cdn::download::download_and_decrypt(
-                &self.sender.cdn_base_url,
-                cdn_media,
-                aes_key,
-            )
-            .await?
+            crate::cdn::download::download_and_decrypt(&self.sender.cdn_base_url, cdn_media, aes_key).await?
         } else if let Some(cdn_media) = &media.cdn_media {
             crate::cdn::download::download_plain(&self.sender.cdn_base_url, cdn_media).await?
         } else {
-            return Err(crate::error::Error::CdnUpload(
-                "no media source available".into(),
-            ));
+            return Err(crate::error::Error::CdnUpload("no media source available".into()));
         };
         // If this is a voice message, attempt SILK→WAV transcode.
-        let data = if media.media_type == crate::types::MediaType::Voice && crate::media::voice_transcode::is_silk_format(&raw_data) {
-            if let Some(res) = crate::media::voice_transcode::silk_to_wav(&raw_data).await {
+        let data = if media.media_type == crate::types::MediaType::Voice
+            && crate::media::voice_transcode::is_silk_format(&raw_data)
+        {
+            if let Some(res) = crate::media::voice_transcode::silk_to_wav(&raw_data) {
                 res.data
             } else {
                 // Fallback to original data on failure.
@@ -160,18 +149,6 @@ impl MessageContext {
     }
 
     /// Cancel the typing indicator.
-
-    /// Send an error notice (fire-and-forget).
-    pub async fn send_error_notice(&self, kind: crate::messaging::error_notice::ErrorNoticeKind, detail: &str) {
-        crate::messaging::error_notice::send_error_notice(
-            &self.sender.api,
-            &self.from,
-            kind,
-            detail,
-            self.context_token.as_deref(),
-        )
-        .await;
-    }
     pub async fn cancel_typing(&self) -> Result<()> {
         let ticket = self
             .sender
@@ -185,6 +162,18 @@ impl MessageContext {
             base_info: build_base_info(),
         };
         self.sender.api.send_typing(&req).await
+    }
+
+    /// Send an error notice (fire-and-forget).
+    pub async fn send_error_notice(&self, kind: crate::messaging::error_notice::ErrorNoticeKind, detail: &str) {
+        crate::messaging::error_notice::send_error_notice(
+            &self.sender.api,
+            &self.from,
+            kind,
+            detail,
+            self.context_token.as_deref(),
+        )
+        .await;
     }
 }
 
@@ -234,12 +223,7 @@ impl ContextTokenStore {
 fn is_media_item(item: &MessageItem) -> bool {
     matches!(
         item.item_type,
-        Some(
-            MessageItemType::Image
-                | MessageItemType::Video
-                | MessageItemType::File
-                | MessageItemType::Voice
-        )
+        Some(MessageItemType::Image | MessageItemType::Video | MessageItemType::File | MessageItemType::Voice)
     )
 }
 
@@ -404,12 +388,16 @@ pub fn should_process(msg: &WeixinMessage) -> bool {
 }
 
 /// Parse a raw `WeixinMessage` into a `MessageContext`.
-pub fn parse_inbound_message(msg: &WeixinMessage, sender: Arc<MessageSender>, timing: crate::messaging::debug_mode::MessageTiming) -> MessageContext {
+pub fn parse_inbound_message(
+    msg: &WeixinMessage,
+    sender: Arc<MessageSender>,
+    timing: crate::messaging::debug_mode::MessageTiming,
+) -> MessageContext {
     let items = msg.item_list.as_deref().unwrap_or(&[]);
     let body = body_from_item_list(items);
 
-        MessageContext {
-            timing,
+    MessageContext {
+        timing,
         message_id: generate_id("weixin-agent"),
         server_message_id: msg.message_id,
         from: msg.from_user_id.clone().unwrap_or_default(),

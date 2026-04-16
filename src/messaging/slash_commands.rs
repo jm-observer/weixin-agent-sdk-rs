@@ -1,7 +1,7 @@
 //! Slash command handling for debugging and echo.
 
-use crate::messaging::inbound::MessageContext;
 use crate::messaging::debug_mode::{DebugMode, MessageTiming};
+use crate::messaging::inbound::MessageContext;
 
 /// Result of slash command handling.
 #[derive(Debug, PartialEq, Eq)]
@@ -20,17 +20,16 @@ pub async fn handle_slash_command(
     debug_mode: &DebugMode,
     timing: &MessageTiming,
 ) -> SlashCommandResult {
-    let txt = text.trim();
-    if txt.starts_with("/echo ") {
-        let echo_text = &txt[6..];
+    let cmd_text = text.trim();
+    if let Some(echo_text) = cmd_text.strip_prefix("/echo ") {
         let timing_info = format!("\n\n---\nPlatform→SDK: {}ms", timing.platform_to_plugin_ms());
-        let _ = ctx.reply_text(&format!("{}{}", echo_text, timing_info)).await;
+        let _ = ctx.reply_text(&format!("{echo_text}{timing_info}")).await;
         return SlashCommandResult::Handled;
     }
-    if txt == "/toggle-debug" {
+    if cmd_text == "/toggle-debug" {
         let new_state = debug_mode.toggle();
         let status = if new_state { "ON" } else { "OFF" };
-        let _ = ctx.reply_text(&format!("[Debug mode: {}]", status)).await;
+        let _ = ctx.reply_text(&format!("[Debug mode: {status}]")).await;
         return SlashCommandResult::Handled;
     }
     SlashCommandResult::NotACommand

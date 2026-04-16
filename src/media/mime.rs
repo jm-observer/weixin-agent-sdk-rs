@@ -4,10 +4,7 @@ use std::path::Path;
 
 /// Get MIME type from a filename extension. Returns `"application/octet-stream"` for unknown.
 pub fn get_mime_from_filename(filename: &str) -> &'static str {
-    let ext = Path::new(filename)
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("");
+    let ext = Path::new(filename).extension().and_then(|e| e.to_str()).unwrap_or("");
     match ext.to_ascii_lowercase().as_str() {
         "pdf" => "application/pdf",
         "doc" => "application/msword",
@@ -66,10 +63,7 @@ pub fn get_extension_from_mime(mime_type: &str) -> &'static str {
 }
 
 /// Get extension from Content-Type header or URL path. Returns `".bin"` for unknown.
-pub fn get_extension_from_content_type_or_url(
-    content_type: Option<&str>,
-    url: &str,
-) -> &'static str {
+pub fn get_extension_from_content_type_or_url(content_type: Option<&str>, url: &str) -> &'static str {
     if let Some(ct) = content_type {
         let ext = get_extension_from_mime(ct);
         if ext != ".bin" {
@@ -105,10 +99,7 @@ mod tests {
 
     #[test]
     fn mime_from_unknown_extension() {
-        assert_eq!(
-            get_mime_from_filename("file.xyz"),
-            "application/octet-stream"
-        );
+        assert_eq!(get_mime_from_filename("file.xyz"), "application/octet-stream");
         assert_eq!(get_mime_from_filename("noext"), "application/octet-stream");
     }
 
@@ -143,10 +134,7 @@ mod tests {
         );
         // Unknown content-type, known URL
         assert_eq!(
-            get_extension_from_content_type_or_url(
-                Some("application/x-custom"),
-                "https://x.com/f.pdf"
-            ),
+            get_extension_from_content_type_or_url(Some("application/x-custom"), "https://x.com/f.pdf"),
             ".pdf"
         );
     }

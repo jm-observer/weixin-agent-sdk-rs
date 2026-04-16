@@ -45,11 +45,7 @@ mod client;
 pub use client::{WeixinClient, WeixinClientBuilder};
 pub use config::{WeixinConfig, WeixinConfigBuilder};
 pub use error::{Error, Result};
-pub use messaging::inbound::{
-    ContextTokenStore, MediaInfo, MessageContext, RefMessageInfo, SendResult,
-};
+pub use messaging::inbound::{ContextTokenStore, MediaInfo, MessageContext, RefMessageInfo, SendResult};
 pub use monitor::poll_loop::MessageHandler;
 pub use qr_login::login::{LoginStatus, QrLoginApi, QrLoginSession, StandaloneQrLogin};
-pub use types::{
-    CdnMedia, MediaType, MessageItemType, MessageState, MessageType, TypingStatus, UploadMediaType,
-};
+pub use types::{CdnMedia, MediaType, MessageItemType, MessageState, MessageType, TypingStatus, UploadMediaType};

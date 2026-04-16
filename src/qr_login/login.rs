@@ -5,8 +5,7 @@ use std::time::Duration;
 use crate::api::client::HttpApiClient;
 use crate::error::Result;
 use crate::types::{
-    DEFAULT_ILINK_BOT_TYPE, DEFAULT_QR_GET_TIMEOUT_MS, DEFAULT_QR_POLL_TIMEOUT_MS, QrCodeResponse,
-    QrStatusResponse,
+    DEFAULT_ILINK_BOT_TYPE, DEFAULT_QR_GET_TIMEOUT_MS, DEFAULT_QR_POLL_TIMEOUT_MS, QrCodeResponse, QrStatusResponse,
 };
 
 /// QR login session returned by [`QrLoginApi::start`].
@@ -59,10 +58,7 @@ impl<'a> QrLoginApi<'a> {
     /// Fetch a new QR code. `bot_type` defaults to `"3"`.
     pub async fn start(&self, bot_type: Option<&str>) -> Result<QrLoginSession> {
         let bt = bot_type.unwrap_or(DEFAULT_ILINK_BOT_TYPE);
-        let endpoint = format!(
-            "ilink/bot/get_bot_qrcode?bot_type={}",
-            urlencoding::encode(bt)
-        );
+        let endpoint = format!("ilink/bot/get_bot_qrcode?bot_type={}", urlencoding::encode(bt));
         let raw = self
             .api
             .api_get(&endpoint, Duration::from_millis(DEFAULT_QR_GET_TIMEOUT_MS))

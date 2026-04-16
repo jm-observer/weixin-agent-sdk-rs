@@ -28,12 +28,10 @@ pub fn random_hex(n: usize) -> String {
     use std::fmt::Write;
     let mut rng = rand::rng();
     let bytes: Vec<u8> = (0..n).map(|_| rng.random()).collect();
-    bytes
-        .iter()
-        .fold(String::with_capacity(n * 2), |mut acc, b| {
-            let _ = write!(acc, "{b:02x}");
-            acc
-        })
+    bytes.iter().fold(String::with_capacity(n * 2), |mut acc, b| {
+        let _ = write!(acc, "{b:02x}");
+        acc
+    })
 }
 
 #[cfg(test)]

@@ -1,10 +1,10 @@
 // Remote download utilities for media files.
 
-use std::path::{Path, PathBuf};
-use std::time::Duration;
 use crate::error::Result;
 use crate::media::mime::get_extension_from_content_type_or_url;
 use crate::util::random::temp_file_name;
+use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 /// Maximum allowed download size (100 MB).
 const MAX_DOWNLOAD_SIZE: u64 = 100 * 1024 * 1024;
@@ -17,11 +17,7 @@ pub async fn download_remote_file(url: &str, dest_dir: &Path) -> Result<PathBuf>
     tokio::fs::create_dir_all(dest_dir).await?;
 
     let client = reqwest::Client::new();
-    let resp = client
-        .get(url)
-        .timeout(DOWNLOAD_TIMEOUT)
-        .send()
-        .await?;
+    let resp = client.get(url).timeout(DOWNLOAD_TIMEOUT).send().await?;
     if !resp.status().is_success() {
         return Err(crate::error::Error::CdnUpload(format!(
             "failed to download remote file: status {}",
@@ -29,7 +25,10 @@ pub async fn download_remote_file(url: &str, dest_dir: &Path) -> Result<PathBuf>
         )));
     }
     // Determine extension.
-    let content_type = resp.headers().get(reqwest::header::CONTENT_TYPE).and_then(|v| v.to_str().ok());
+    let content_type = resp
+        .headers()
+        .get(reqwest::header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok());
     let ext = get_extension_from_content_type_or_url(content_type, url);
     let filename = temp_file_name("remote", ext);
     let file_path = dest_dir.join(&filename);

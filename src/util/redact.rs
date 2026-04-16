@@ -57,13 +57,7 @@ pub fn redact_body(body: &str, max_len: usize) -> String {
         return "(empty)".to_owned();
     }
     let mut redacted = body.to_owned();
-    for key in &[
-        "context_token",
-        "bot_token",
-        "token",
-        "authorization",
-        "Authorization",
-    ] {
+    for key in &["context_token", "bot_token", "token", "authorization", "Authorization"] {
         let pattern = format!("\"{key}\":\"");
         let mut search_from = 0;
         while search_from < redacted.len() {
@@ -86,11 +80,7 @@ pub fn redact_body(body: &str, max_len: usize) -> String {
         return redacted;
     }
     let boundary = safe_boundary(&redacted, max_len);
-    format!(
-        "{}…(truncated, totalLen={})",
-        &redacted[..boundary],
-        redacted.len()
-    )
+    format!("{}…(truncated, totalLen={})", &redacted[..boundary], redacted.len())
 }
 
 /// Convenience wrapper with default max length.

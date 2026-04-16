@@ -10,8 +10,8 @@ use crate::media::mime::get_mime_from_filename;
 use crate::messaging::inbound::SendResult;
 use crate::messaging::send::generate_client_id;
 use crate::types::{
-    CdnMedia, FileItem, ImageItem, MessageItem, MessageItemType, MessageState, MessageType,
-    SendMessageRequest, UploadMediaType, VideoItem, WeixinMessage, build_base_info,
+    CdnMedia, FileItem, ImageItem, MessageItem, MessageItemType, MessageState, MessageType, SendMessageRequest,
+    UploadMediaType, VideoItem, WeixinMessage, build_base_info,
 };
 
 /// Upload a file and send it as a message, routing by MIME type.
@@ -23,10 +23,7 @@ pub(crate) async fn send_media_file(
     text: &str,
     context_token: Option<&str>,
 ) -> Result<SendResult> {
-    let filename = file_path
-        .file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("file.bin");
+    let filename = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("file.bin");
     let mime = get_mime_from_filename(filename);
 
     let (media_type, build_item): (UploadMediaType, fn(&str, &CdnUploadResult) -> MessageItem) =
@@ -63,9 +60,7 @@ pub(crate) async fn send_media_file(
     };
     api.send_message(&req).await?;
 
-    Ok(SendResult {
-        message_id: client_id,
-    })
+    Ok(SendResult { message_id: client_id })
 }
 
 fn build_image_item(_filename: &str, uploaded: &CdnUploadResult) -> MessageItem {
@@ -77,10 +72,7 @@ fn build_image_item(_filename: &str, uploaded: &CdnUploadResult) -> MessageItem 
         image_item: Some(ImageItem {
             media: Some(CdnMedia {
                 encrypt_query_param: Some(uploaded.encrypt_query_param.clone()),
-                aes_key: Some(
-                    base64::engine::general_purpose::STANDARD
-                        .encode(uploaded.aes_key_hex.as_bytes()),
-                ),
+                aes_key: Some(base64::engine::general_purpose::STANDARD.encode(uploaded.aes_key_hex.as_bytes())),
                 encrypt_type: Some(1),
                 ..Default::default()
             }),
@@ -100,10 +92,7 @@ fn build_video_item(_filename: &str, uploaded: &CdnUploadResult) -> MessageItem 
         video_item: Some(VideoItem {
             media: Some(CdnMedia {
                 encrypt_query_param: Some(uploaded.encrypt_query_param.clone()),
-                aes_key: Some(
-                    base64::engine::general_purpose::STANDARD
-                        .encode(uploaded.aes_key_hex.as_bytes()),
-                ),
+                aes_key: Some(base64::engine::general_purpose::STANDARD.encode(uploaded.aes_key_hex.as_bytes())),
                 encrypt_type: Some(1),
                 ..Default::default()
             }),
@@ -121,10 +110,7 @@ fn build_file_item(filename: &str, uploaded: &CdnUploadResult) -> MessageItem {
         file_item: Some(FileItem {
             media: Some(CdnMedia {
                 encrypt_query_param: Some(uploaded.encrypt_query_param.clone()),
-                aes_key: Some(
-                    base64::engine::general_purpose::STANDARD
-                        .encode(uploaded.aes_key_hex.as_bytes()),
-                ),
+                aes_key: Some(base64::engine::general_purpose::STANDARD.encode(uploaded.aes_key_hex.as_bytes())),
                 encrypt_type: Some(1),
                 ..Default::default()
             }),

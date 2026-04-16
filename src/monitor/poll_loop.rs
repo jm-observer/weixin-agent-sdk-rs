@@ -11,8 +11,8 @@ use crate::api::session_guard::SessionGuard;
 use crate::error::Result;
 use crate::messaging::inbound::{self, ContextTokenStore, MessageSender};
 use crate::types::{
-    BACKOFF_DELAY_MS, GetUpdatesRequest, MAX_CONSECUTIVE_FAILURES, RETRY_DELAY_MS,
-    SESSION_EXPIRED_ERRCODE, build_base_info,
+    BACKOFF_DELAY_MS, GetUpdatesRequest, MAX_CONSECUTIVE_FAILURES, RETRY_DELAY_MS, SESSION_EXPIRED_ERRCODE,
+    build_base_info,
 };
 
 /// The handler trait users implement to receive messages.
@@ -122,11 +122,7 @@ pub(crate) async fn run_monitor(
                 session_guard.pause();
                 consecutive_failures = 0;
                 let remaining = session_guard.remaining_ms();
-                tracing::error!(
-                    errcode,
-                    remaining_min = remaining / 60_000,
-                    "session expired, pausing"
-                );
+                tracing::error!(errcode, remaining_min = remaining / 60_000, "session expired, pausing");
                 sleep_or_cancel(Duration::from_millis(remaining), &cancel).await;
                 continue;
             }
@@ -177,10 +173,13 @@ pub(crate) async fn run_monitor(
             }
 
             // Record reception time
-            let received_now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64;
+            let received_now = u64::try_from(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis(),
+            )
+            .unwrap_or(0);
             // Initialise timing record
             let mut timing = crate::messaging::debug_mode::MessageTiming {
                 event_timestamp_ms: msg.create_time_ms.unwrap_or(0),
@@ -191,10 +190,13 @@ pub(crate) async fn run_monitor(
             // Parse inbound with timing info
             let ctx = inbound::parse_inbound_message(msg, Arc::clone(&sender), timing.clone());
             // Mark inbound processing done
-            let inbound_done = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64;
+            let inbound_done = u64::try_from(
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis(),
+            )
+            .unwrap_or(0);
             // Update timing in context (we have mutable ctx? it's immutable). Instead, we will pass timing to slash handling before calling handler.
             // First, attempt slash command handling
             let slash_result = crate::messaging::slash_commands::handle_slash_command(
@@ -202,13 +204,19 @@ pub(crate) async fn run_monitor(
                 &ctx,
                 &debug_mode,
                 &timing,
-            ).await;
+            )
+            .await;
             if slash_result == crate::messaging::slash_commands::SlashCommandResult::Handled {
                 // Record reply done time (reply already sent inside slash handler)
-                timing.reply_done_ms = Some(std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_millis() as u64);
+                timing.reply_done_ms = Some(
+                    u64::try_from(
+                        std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_millis(),
+                    )
+                    .unwrap_or(0),
+                );
                 // If debug mode enabled, send timing report
                 if debug_mode.is_enabled() {
                     let _ = ctx.reply_text(&timing.format_report()).await;
@@ -225,17 +233,20 @@ pub(crate) async fn run_monitor(
                     message_id = %ctx.message_id,
                     "on_message handler error"
                 );
-            }            // After handler completes, record reply done time (approx now)
-            timing.reply_done_ms = Some(std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64);
+            } // After handler completes, record reply done time (approx now)
+            timing.reply_done_ms = Some(
+                u64::try_from(
+                    std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis(),
+                )
+                .unwrap_or(0),
+            );
             // If debug mode enabled, send report
             if debug_mode.is_enabled() {
                 let _ = ctx.reply_text(&timing.format_report()).await;
             }
-
-
         }
     }
 

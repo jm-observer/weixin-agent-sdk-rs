@@ -52,12 +52,10 @@ pub(crate) async fn upload_file(
     // Generate random 16-byte AES key
     let mut aes_key = [0u8; 16];
     rand::rng().fill(&mut aes_key);
-    let aes_key_hex = aes_key
-        .iter()
-        .fold(String::with_capacity(32), |mut acc, b| {
-            let _ = write!(acc, "{b:02x}");
-            acc
-        });
+    let aes_key_hex = aes_key.iter().fold(String::with_capacity(32), |mut acc, b| {
+        let _ = write!(acc, "{b:02x}");
+        acc
+    });
 
     tracing::debug!(
         file = ?file_path,
@@ -96,9 +94,7 @@ pub(crate) async fn upload_file(
     } else if let Some(param) = upload_param {
         build_cdn_upload_url(cdn_base_url, param, &filekey)
     } else {
-        return Err(Error::CdnUpload(
-            "getUploadUrl returned no upload URL".into(),
-        ));
+        return Err(Error::CdnUpload("getUploadUrl returned no upload URL".into()));
     };
 
     let download_param = upload_buffer_to_cdn(&plaintext, &aes_key, &cdn_url).await?;

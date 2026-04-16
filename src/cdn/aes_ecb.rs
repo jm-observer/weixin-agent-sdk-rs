@@ -51,8 +51,7 @@ pub fn parse_aes_key(aes_key_base64: &str) -> Result<[u8; 16]> {
     }
 
     if decoded.len() == 32 {
-        let hex_str = std::str::from_utf8(&decoded)
-            .map_err(|_| Error::Crypto("aes_key hex not valid UTF-8".into()))?;
+        let hex_str = std::str::from_utf8(&decoded).map_err(|_| Error::Crypto("aes_key hex not valid UTF-8".into()))?;
         if hex_str.len() == 32 && hex_str.chars().all(|c| c.is_ascii_hexdigit()) {
             let bytes = hex_to_bytes(hex_str)?;
             let mut key = [0u8; 16];
@@ -73,10 +72,7 @@ pub(crate) fn hex_to_bytes(hex: &str) -> Result<Vec<u8>> {
     }
     (0..hex.len())
         .step_by(2)
-        .map(|i| {
-            u8::from_str_radix(&hex[i..i + 2], 16)
-                .map_err(|e| Error::Crypto(format!("hex parse: {e}")))
-        })
+        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).map_err(|e| Error::Crypto(format!("hex parse: {e}"))))
         .collect()
 }
 

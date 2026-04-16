@@ -31,9 +31,7 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 
 use clap::{Parser, Subcommand};
-use weixin_agent::{
-    MediaInfo, MediaType, MessageContext, MessageHandler, Result, WeixinClient, WeixinConfig,
-};
+use weixin_agent::{MediaInfo, MediaType, MessageContext, MessageHandler, Result, WeixinClient, WeixinConfig};
 
 // ─── CLI ────────────────────────────────────────────────────────────
 
@@ -110,10 +108,7 @@ impl MessageHandler for E2eHandler {
 
         // Quoted messages
         if let Some(ref_msg) = &ctx.ref_message {
-            let mut reply = format!(
-                "📎 引用消息:\n标题: {}",
-                ref_msg.title.as_deref().unwrap_or("(无)")
-            );
+            let mut reply = format!("📎 引用消息:\n标题: {}", ref_msg.title.as_deref().unwrap_or("(无)"));
             if let Some(body) = &ref_msg.body {
                 reply += &format!("\n内容: {}", truncate(body, 100));
             }
@@ -204,8 +199,7 @@ impl E2eHandler {
                 .await?;
             }
             _ => {
-                ctx.reply_text(&format!("未知命令: {text}\n发送 help 查看帮助"))
-                    .await?;
+                ctx.reply_text(&format!("未知命令: {text}\n发送 help 查看帮助")).await?;
             }
         }
         Ok(())
@@ -263,10 +257,7 @@ impl E2eHandler {
         match ctx.download_media(media, &dest).await {
             Ok(path) => {
                 let elapsed = start.elapsed();
-                let size = tokio::fs::metadata(&path)
-                    .await
-                    .map(|m| m.len())
-                    .unwrap_or(0);
+                let size = tokio::fs::metadata(&path).await.map(|m| m.len()).unwrap_or(0);
                 let msg = format!(
                     "\n\n✅ 下载成功: {:.1}KB, {elapsed:.1?}\n→ {}",
                     size as f64 / 1024.0,
@@ -365,15 +356,11 @@ async fn main() -> anyhow::Result<()> {
             }
         }
 
-        Command::Start {
-            debug,
-            download_dir,
-        } => {
+        Command::Start { debug, download_dir } => {
             let filter = if debug { "debug" } else { "info" };
             tracing_subscriber::fmt()
                 .with_env_filter(
-                    tracing_subscriber::EnvFilter::try_from_default_env()
-                        .unwrap_or_else(|_| filter.into()),
+                    tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| filter.into()),
                 )
                 .init();
 
@@ -407,10 +394,7 @@ async fn main() -> anyhow::Result<()> {
                     .map(|d| d.display().to_string())
                     .unwrap_or_else(|| "disabled".into())
             );
-            println!(
-                "║ Debug: {:<33}║",
-                if debug { "enabled" } else { "disabled" }
-            );
+            println!("║ Debug: {:<33}║", if debug { "enabled" } else { "disabled" });
             println!("╚══════════════════════════════════════════╝");
 
             // Start all users concurrently
@@ -466,9 +450,7 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
 
-            let client = WeixinClient::builder(config)
-                .on_message(NoopHandler)
-                .build()?;
+            let client = WeixinClient::builder(config).on_message(NoopHandler).build()?;
             client.context_tokens().import(ctx_tokens);
 
             let ct = client.context_tokens().get(&to);
@@ -486,11 +468,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-async fn run_user(
-    user_dir: PathBuf,
-    base_url: Option<String>,
-    download_dir: Option<PathBuf>,
-) -> anyhow::Result<()> {
+async fn run_user(user_dir: PathBuf, base_url: Option<String>, download_dir: Option<PathBuf>) -> anyhow::Result<()> {
     let token = tokio::fs::read_to_string(common::token_path(&user_dir))
         .await?
         .trim()

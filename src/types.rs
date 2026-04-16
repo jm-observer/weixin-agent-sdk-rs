@@ -129,7 +129,7 @@ pub enum MediaType {
     File,
 }
 
-/// Voice encoding types (matching WeChat encode_type values).
+/// Voice encoding types (matching `WeChat` `encode_type` values).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize_repr, Deserialize_repr)]
 #[repr(i32)]
 pub enum VoiceEncodeType {

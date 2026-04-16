@@ -5,9 +5,9 @@ use std::time::Duration;
 use crate::config::WeixinConfig;
 use crate::error::{Error, Result};
 use crate::types::{
-    CHANNEL_VERSION, DEFAULT_CONFIG_TIMEOUT_MS, GetConfigRequest, GetConfigResponse,
-    GetUpdatesRequest, GetUpdatesResponse, GetUploadUrlRequest, GetUploadUrlResponse, ILINK_APP_ID,
-    SendMessageRequest, SendTypingRequest, build_base_info,
+    CHANNEL_VERSION, DEFAULT_CONFIG_TIMEOUT_MS, GetConfigRequest, GetConfigResponse, GetUpdatesRequest,
+    GetUpdatesResponse, GetUploadUrlRequest, GetUploadUrlResponse, ILINK_APP_ID, SendMessageRequest, SendTypingRequest,
+    build_base_info,
 };
 use crate::util::redact;
 
@@ -121,11 +121,7 @@ impl HttpApiClient {
     }
 
     /// Long-poll `getUpdates`. On client-side timeout, returns an empty response.
-    pub async fn get_updates(
-        &self,
-        request: &GetUpdatesRequest,
-        timeout: Duration,
-    ) -> Result<GetUpdatesResponse> {
+    pub async fn get_updates(&self, request: &GetUpdatesRequest, timeout: Duration) -> Result<GetUpdatesResponse> {
         let url = format!("{}ilink/bot/getupdates", self.base_url);
         let body_str = serde_json::to_string(request)?;
 
@@ -161,20 +157,13 @@ impl HttpApiClient {
     }
 
     /// Get a pre-signed CDN upload URL.
-    pub async fn get_upload_url(
-        &self,
-        request: &GetUploadUrlRequest,
-    ) -> Result<GetUploadUrlResponse> {
+    pub async fn get_upload_url(&self, request: &GetUploadUrlRequest) -> Result<GetUploadUrlResponse> {
         self.post_json("ilink/bot/getuploadurl", request, self.api_timeout)
             .await
     }
 
     /// Fetch bot config (`typing_ticket`).
-    pub async fn get_config(
-        &self,
-        user_id: &str,
-        context_token: Option<&str>,
-    ) -> Result<GetConfigResponse> {
+    pub async fn get_config(&self, user_id: &str, context_token: Option<&str>) -> Result<GetConfigResponse> {
         let body = GetConfigRequest {
             ilink_user_id: user_id.to_owned(),
             context_token: context_token.map(String::from),
@@ -237,27 +226,19 @@ mod tests {
 
     #[test]
     fn ensure_trailing_slash_adds() {
-        assert_eq!(
-            ensure_trailing_slash("https://example.com"),
-            "https://example.com/"
-        );
+        assert_eq!(ensure_trailing_slash("https://example.com"), "https://example.com/");
     }
 
     #[test]
     fn ensure_trailing_slash_noop() {
-        assert_eq!(
-            ensure_trailing_slash("https://example.com/"),
-            "https://example.com/"
-        );
+        assert_eq!(ensure_trailing_slash("https://example.com/"), "https://example.com/");
     }
 
     #[test]
     fn random_wechat_uin_format() {
         use base64::Engine;
         let uin = random_wechat_uin();
-        let decoded = base64::engine::general_purpose::STANDARD
-            .decode(&uin)
-            .unwrap();
+        let decoded = base64::engine::general_purpose::STANDARD.decode(&uin).unwrap();
         let s = std::str::from_utf8(&decoded).unwrap();
         assert!(s.parse::<u32>().is_ok());
     }

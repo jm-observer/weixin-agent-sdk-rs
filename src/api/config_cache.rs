@@ -32,16 +32,9 @@ impl ConfigCache {
     }
 
     /// Get the cached `typing_ticket` for a user, refreshing if stale.
-    pub async fn get_typing_ticket(
-        &self,
-        user_id: &str,
-        context_token: Option<&str>,
-    ) -> Option<String> {
+    pub async fn get_typing_ticket(&self, user_id: &str, context_token: Option<&str>) -> Option<String> {
         let now = now_ms();
-        let should_fetch = self
-            .cache
-            .get(user_id)
-            .is_none_or(|e| now >= e.next_fetch_at);
+        let should_fetch = self.cache.get(user_id).is_none_or(|e| now >= e.next_fetch_at);
 
         if should_fetch {
             match self.api.get_config(user_id, context_token).await {

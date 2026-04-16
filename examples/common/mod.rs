@@ -62,10 +62,7 @@ pub async fn resolve_token(args: &BotArgs) -> anyhow::Result<String> {
 
 /// Interactive QR login: display QR in terminal, poll until confirmed, save token.
 /// Returns (token, ilink_bot_id).
-pub async fn qr_login(
-    state_dir: &Path,
-    base_url: Option<&str>,
-) -> anyhow::Result<(String, String)> {
+pub async fn qr_login(state_dir: &Path, base_url: Option<&str>) -> anyhow::Result<(String, String)> {
     let mut builder = WeixinConfig::builder().token("");
     if let Some(url) = base_url {
         builder = builder.base_url(url);
@@ -119,14 +116,9 @@ fn print_qr(content: &str) {
 // ── State persistence helpers ───────────────────────────────────────
 
 pub async fn load_sync_buf(state_dir: &Path) -> Option<String> {
-    let data = tokio::fs::read_to_string(sync_buf_path(state_dir))
-        .await
-        .ok()?;
+    let data = tokio::fs::read_to_string(sync_buf_path(state_dir)).await.ok()?;
     let parsed: serde_json::Value = serde_json::from_str(&data).ok()?;
-    parsed
-        .get("get_updates_buf")
-        .and_then(|v| v.as_str())
-        .map(String::from)
+    parsed.get("get_updates_buf").and_then(|v| v.as_str()).map(String::from)
 }
 
 pub async fn save_sync_buf(state_dir: &Path, sync_buf: &str) -> anyhow::Result<()> {
@@ -143,14 +135,7 @@ pub async fn load_context_tokens(state_dir: &Path) -> HashMap<String, String> {
 }
 
 #[allow(dead_code)]
-pub async fn save_context_tokens(
-    state_dir: &Path,
-    tokens: &HashMap<String, String>,
-) -> anyhow::Result<()> {
-    tokio::fs::write(
-        context_tokens_path(state_dir),
-        serde_json::to_string(tokens)?,
-    )
-    .await?;
+pub async fn save_context_tokens(state_dir: &Path, tokens: &HashMap<String, String>) -> anyhow::Result<()> {
+    tokio::fs::write(context_tokens_path(state_dir), serde_json::to_string(tokens)?).await?;
     Ok(())
 }

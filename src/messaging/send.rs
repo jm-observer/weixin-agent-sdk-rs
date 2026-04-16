@@ -6,8 +6,8 @@ use crate::api::client::HttpApiClient;
 use crate::error::Result;
 use crate::messaging::inbound::SendResult;
 use crate::types::{
-    MessageItem, MessageItemType, MessageState, MessageType, SendMessageRequest, TextItem,
-    WeixinMessage, build_base_info,
+    MessageItem, MessageItemType, MessageState, MessageType, SendMessageRequest, TextItem, WeixinMessage,
+    build_base_info,
 };
 use crate::util::random::generate_id;
 
@@ -72,10 +72,7 @@ mod tests {
         let items = msg.item_list.as_ref().unwrap();
         assert_eq!(items.len(), 1);
         assert_eq!(items[0].item_type, Some(MessageItemType::Text));
-        assert_eq!(
-            items[0].text_item.as_ref().unwrap().text.as_deref(),
-            Some("hi")
-        );
+        assert_eq!(items[0].text_item.as_ref().unwrap().text.as_deref(), Some("hi"));
     }
 
     #[test]

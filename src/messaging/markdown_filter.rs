@@ -28,8 +28,15 @@ impl StreamingMarkdownFilter {
     }
 
     /// Feed a chunk of text.
+    ///
+    /// # Panics
+    ///
+    /// This method does not panic.
     pub fn feed(&mut self, chunk: &str) {
         let mut processed = String::new();
+        let re_bold = Regex::new(r"\*\*(.+?)\*\*").unwrap();
+        let re_italic = Regex::new(r"\*(.+?)\*").unwrap();
+
         for line in chunk.lines() {
             // Handle code fence start/end.
             if line.trim_start().starts_with("```") {
@@ -58,7 +65,6 @@ impl StreamingMarkdownFilter {
             // Process inline * and **
             let mut line_processed = line.to_owned();
             // ** pattern
-            let re_bold = Regex::new(r"\*\*(.+?)\*\*").unwrap();
             line_processed = re_bold
                 .replace_all(&line_processed, |caps: &regex::Captures| {
                     let inner = &caps[1];
@@ -70,7 +76,6 @@ impl StreamingMarkdownFilter {
                 })
                 .to_string();
             // * pattern (avoid matching already processed **)
-            let re_italic = Regex::new(r"\*(.+?)\*").unwrap();
             line_processed = re_italic
                 .replace_all(&line_processed, |caps: &regex::Captures| {
                     let inner = &caps[1];
