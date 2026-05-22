@@ -36,6 +36,17 @@ fn ensure_trailing_slash(url: &str) -> String {
     }
 }
 
+/// Retry budget for transient transport errors in `post_json`.
+const POST_MAX_RETRIES: u32 = 2;
+/// Fixed backoff between `post_json` retries.
+const POST_RETRY_DELAY: Duration = Duration::from_millis(500);
+
+/// True for transport errors worth retrying — client-side timeouts and
+/// connection failures. API errors (non-2xx) and decode errors are not retried.
+fn is_retryable_transport(err: &Error) -> bool {
+    matches!(err, Error::Http(e) if e.is_timeout() || e.is_connect())
+}
+
 /// Low-level HTTP client for all iLink Bot API endpoints.
 pub struct HttpApiClient {
     base_url: String,
@@ -84,7 +95,35 @@ impl HttpApiClient {
         h
     }
 
+    /// POST JSON with bounded retries on transient transport errors
+    /// (timeout / connection failures). API and decode errors are returned
+    /// immediately without retry.
     async fn post_json<T: serde::de::DeserializeOwned>(
+        &self,
+        endpoint: &str,
+        body: &impl serde::Serialize,
+        timeout: Duration,
+    ) -> Result<T> {
+        let mut attempt = 0u32;
+        loop {
+            match self.post_json_once(endpoint, body, timeout).await {
+                Ok(value) => return Ok(value),
+                Err(err) if attempt < POST_MAX_RETRIES && is_retryable_transport(&err) => {
+                    attempt += 1;
+                    tracing::warn!(
+                        endpoint,
+                        attempt,
+                        error = %err,
+                        "post_json transient failure; retrying after backoff"
+                    );
+                    tokio::time::sleep(POST_RETRY_DELAY).await;
+                }
+                Err(err) => return Err(err),
+            }
+        }
+    }
+
+    async fn post_json_once<T: serde::de::DeserializeOwned>(
         &self,
         endpoint: &str,
         body: &impl serde::Serialize,
@@ -241,5 +280,16 @@ mod tests {
         let decoded = base64::engine::general_purpose::STANDARD.decode(&uin).unwrap();
         let s = std::str::from_utf8(&decoded).unwrap();
         assert!(s.parse::<u32>().is_ok());
+    }
+
+    #[test]
+    fn is_retryable_transport_rejects_non_transport_errors() {
+        assert!(!is_retryable_transport(&Error::Api {
+            errcode: 500,
+            errmsg: "boom".into(),
+        }));
+        assert!(!is_retryable_transport(&Error::Crypto("bad".into())));
+        assert!(!is_retryable_transport(&Error::Config("bad".into())));
+        assert!(!is_retryable_transport(&Error::Timeout("slow".into())));
     }
 }

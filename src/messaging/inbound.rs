@@ -85,7 +85,7 @@ pub struct MessageContext {
 impl MessageContext {
     /// Reply with a text message.
     pub async fn reply_text(&self, text: &str) -> Result<SendResult> {
-        crate::messaging::send::send_text(&self.sender.api, &self.from, text, self.context_token.as_deref()).await
+        crate::messaging::send::send_text(&self.sender.api, &self.from, text, self.context_token.as_deref(), None).await
     }
 
     /// Reply with a media file.
@@ -97,6 +97,7 @@ impl MessageContext {
             file_path,
             "",
             self.context_token.as_deref(),
+            None,
         )
         .await
     }

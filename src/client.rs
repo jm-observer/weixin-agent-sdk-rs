@@ -64,17 +64,34 @@ impl WeixinClient {
     }
 
     /// Send a text message to a user.
-    pub async fn send_text(&self, to: &str, text: &str, context_token: Option<&str>) -> Result<SendResult> {
+    ///
+    /// `client_id` supplies a stable idempotency key (the iLink server
+    /// de-duplicates by it); `None` generates a fresh one.
+    pub async fn send_text(
+        &self,
+        to: &str,
+        text: &str,
+        context_token: Option<&str>,
+        client_id: Option<&str>,
+    ) -> Result<SendResult> {
         let filtered = if self.config.filter_markdown {
             crate::messaging::markdown_filter::StreamingMarkdownFilter::filter(text)
         } else {
             text.to_string()
         };
-        crate::messaging::send::send_text(&self.api, to, &filtered, context_token).await
+        crate::messaging::send::send_text(&self.api, to, &filtered, context_token, client_id).await
     }
 
     /// Send a media file to a user.
-    pub async fn send_media(&self, to: &str, file_path: &Path, context_token: Option<&str>) -> Result<SendResult> {
+    ///
+    /// `client_id` supplies a stable idempotency key; `None` generates one.
+    pub async fn send_media(
+        &self,
+        to: &str,
+        file_path: &Path,
+        context_token: Option<&str>,
+        client_id: Option<&str>,
+    ) -> Result<SendResult> {
         crate::messaging::send_media::send_media_file(
             &self.api,
             &self.config.cdn_base_url,
@@ -82,16 +99,25 @@ impl WeixinClient {
             file_path,
             "",
             context_token,
+            client_id,
         )
         .await
     }
 
     /// Send a remote media URL: download to temp, send, then clean up.
-    pub async fn send_remote_media(&self, to: &str, url: &str, context_token: Option<&str>) -> Result<SendResult> {
+    ///
+    /// `client_id` supplies a stable idempotency key; `None` generates one.
+    pub async fn send_remote_media(
+        &self,
+        to: &str,
+        url: &str,
+        context_token: Option<&str>,
+        client_id: Option<&str>,
+    ) -> Result<SendResult> {
         // Download to temporary location.
         let temp_path = crate::media::remote_download::download_remote_file_to_temp(url).await?;
         // Send the media.
-        let result = self.send_media(to, &temp_path, context_token).await;
+        let result = self.send_media(to, &temp_path, context_token, client_id).await;
         // Clean up temporary file regardless of send result.
         let _ = tokio::fs::remove_file(&temp_path).await;
         result

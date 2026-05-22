@@ -454,7 +454,7 @@ async fn main() -> anyhow::Result<()> {
             client.context_tokens().import(ctx_tokens);
 
             let ct = client.context_tokens().get(&to);
-            let result = client.send_text(&to, &text, ct.as_deref()).await?;
+            let result = client.send_text(&to, &text, ct.as_deref(), None).await?;
 
             println!(
                 "✅ 消息已发送 (from={}, to={}, id={})",

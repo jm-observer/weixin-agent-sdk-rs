@@ -22,6 +22,7 @@ pub(crate) async fn send_media_file(
     file_path: &Path,
     text: &str,
     context_token: Option<&str>,
+    client_id: Option<&str>,
 ) -> Result<SendResult> {
     let filename = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("file.bin");
     let mime = get_mime_from_filename(filename);
@@ -40,11 +41,11 @@ pub(crate) async fn send_media_file(
 
     // Send text and media as separate requests
     if !text.is_empty() {
-        let text_req = crate::messaging::send::build_text_message(to, text, context_token);
+        let text_req = crate::messaging::send::build_text_message(to, text, context_token, None);
         api.send_message(&text_req).await?;
     }
 
-    let client_id = generate_client_id();
+    let client_id = client_id.map(String::from).unwrap_or_else(generate_client_id);
     let req = SendMessageRequest {
         msg: WeixinMessage {
             from_user_id: Some(String::new()),
