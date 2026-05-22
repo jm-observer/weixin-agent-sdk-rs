@@ -17,13 +17,15 @@ pub fn is_silk_format(data: &[u8]) -> bool {
 /// Convert SILK data to WAV. Returns None if transcoding is unavailable or fails.
 #[cfg(feature = "voice-transcode")]
 pub fn silk_to_wav(silk_data: &[u8]) -> Option<TranscodeResult> {
-    // Decode SILK to PCM using the silk-rs crate.
-    let pcm = match silk_rs::decode_silk(silk_data, 24000) {
+    // Decode SILK to PCM using the silk-rs crate. Output at 16 kHz: that is
+    // what general ASR engines (Whisper etc.) expect, and `download_media`'s
+    // documented purpose is to yield ASR-ready WAV.
+    let pcm = match silk_rs::decode_silk(silk_data, 16000) {
         Ok(p) => p,
         Err(_) => return None,
     };
-    // Build a simple WAV header (mono, 16-bit, 24000 Hz).
-    let wav = pcm_to_wav(&pcm, 24000, 16, 1);
+    // Build a simple WAV header (mono, 16-bit, 16000 Hz).
+    let wav = pcm_to_wav(&pcm, 16000, 16, 1);
     Some(TranscodeResult {
         data: wav,
         format: "wav".to_string(),
