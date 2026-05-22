@@ -337,10 +337,9 @@ fn extract_media_from_item(item: &MessageItem) -> Option<MediaInfo> {
         }
         MessageItemType::Voice => {
             let v = item.voice_item.as_ref()?;
-            // Skip media download if voice has text transcription
-            if v.text.is_some() {
-                return None;
-            }
+            // Expose voice media even when WeChat already supplies a built-in
+            // transcription (`voice_item.text`): callers may want to download
+            // the audio and re-transcribe it with their own ASR.
             Some(MediaInfo {
                 media_type: MediaType::Voice,
                 cdn_media: v.media.clone(),
@@ -552,16 +551,25 @@ mod tests {
     }
 
     #[test]
-    fn extract_media_voice_with_text_returns_none() {
+    fn extract_media_voice_with_text_still_yields_media() {
+        // A WeChat voice message carries both a built-in transcription
+        // (`voice_item.text`) and the audio reference. `extract_media` must
+        // still expose the media so callers can re-transcribe the audio.
         let items = vec![MessageItem {
             item_type: Some(MessageItemType::Voice),
             voice_item: Some(VoiceItem {
                 text: Some("transcribed".into()),
+                media: Some(CdnMedia {
+                    aes_key: Some("dGVzdC1rZXk=".into()),
+                    ..Default::default()
+                }),
                 ..Default::default()
             }),
             ..Default::default()
         }];
-        assert!(extract_media(&items).is_none());
+        let media = extract_media(&items).unwrap();
+        assert_eq!(media.media_type, MediaType::Voice);
+        assert_eq!(media.aes_key_base64.as_deref(), Some("dGVzdC1rZXk="));
     }
 
     #[test]
