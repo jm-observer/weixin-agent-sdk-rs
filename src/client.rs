@@ -104,6 +104,32 @@ impl WeixinClient {
         .await
     }
 
+    /// Send an audio file as a **voice message** (语音气泡), not a generic file
+    /// attachment. `duration_ms` is the playback length shown on the bubble
+    /// (`None` if unknown). Encode type is inferred from the extension; mp3 is
+    /// accepted by 微信 natively.
+    ///
+    /// `client_id` supplies a stable idempotency key; `None` generates one.
+    pub async fn send_voice(
+        &self,
+        to: &str,
+        file_path: &Path,
+        duration_ms: Option<i64>,
+        context_token: Option<&str>,
+        client_id: Option<&str>,
+    ) -> Result<SendResult> {
+        crate::messaging::send_media::send_voice_file(
+            &self.api,
+            &self.config.cdn_base_url,
+            to,
+            file_path,
+            duration_ms,
+            context_token,
+            client_id,
+        )
+        .await
+    }
+
     /// Send a remote media URL: download to temp, send, then clean up.
     ///
     /// `client_id` supplies a stable idempotency key; `None` generates one.

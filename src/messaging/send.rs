@@ -42,7 +42,7 @@ pub fn build_text_message(
         msg: WeixinMessage {
             from_user_id: Some(String::new()),
             to_user_id: Some(to.to_owned()),
-            client_id: Some(client_id.map(String::from).unwrap_or_else(generate_client_id)),
+            client_id: Some(client_id.map_or_else(generate_client_id, String::from)),
             message_type: Some(MessageType::Bot),
             message_state: Some(MessageState::Finish),
             item_list,
