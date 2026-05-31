@@ -69,8 +69,18 @@ pub(crate) async fn send_media_file(
 ///
 /// `duration_ms` is the playback length in milliseconds. 微信语音气泡
 /// display this duration; pass `None` if unknown (the bubble may then show 0s).
-/// The encode type is inferred from the file extension — `audio/mpeg` maps to
-/// `VoiceEncodeType::Mp3`, which 微信 accepts natively (no `SILK` transcode needed).
+///
+/// **格式约束**（2026-05-31 修正）：微信客户端的 `voice_item` 语音气泡**实际
+/// 只识别 SILK 编码**（npm 包 README 明示「Voice (SILK encoded)」；mp3 / wav
+/// 即便 `encode_type` 字段填对也不显示气泡——实测）。本函数：
+///   - 检测输入字节是否已经是 SILK V3 → 直接上传
+///   - 否则尝试 WAV → SILK 转码（feature `voice-transcode` 启用时；
+///     `silk_rs::encode_silk(tencent=true)` + `hound` 解 WAV header）→ 上传
+///     SILK 字节、encode_type = Silk
+///   - 转码不可用（feature 关 / 非 WAV / 编码失败）→ 按原扩展名映射
+///     encode_type 上传（向后兼容老调用，但微信端可能不显示气泡，仅作 fallback）
+///
+/// 调用方建议直接传 WAV 或 SILK 文件，不要传 mp3——SDK 无 mp3 解码能力。
 pub(crate) async fn send_voice_file(
     api: &Arc<HttpApiClient>,
     cdn_base_url: &str,
@@ -80,10 +90,27 @@ pub(crate) async fn send_voice_file(
     context_token: Option<&str>,
     client_id: Option<&str>,
 ) -> Result<SendResult> {
-    let filename = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("voice.mp3");
-    let encode_type = voice_encode_type_from_filename(filename);
+    let filename = file_path.file_name().and_then(|n| n.to_str()).unwrap_or("voice.silk");
+    let original_bytes = tokio::fs::read(file_path).await?;
 
-    let uploaded = upload_file(api, cdn_base_url, file_path, UploadMediaType::Voice, to).await?;
+    // 决定最终上传路径与 encode_type
+    let (upload_path_buf, tmp_to_clean, encode_type) =
+        prepare_voice_upload(file_path, filename, &original_bytes).await?;
+
+    let upload_result = upload_file(
+        api,
+        cdn_base_url,
+        upload_path_buf.as_path(),
+        UploadMediaType::Voice,
+        to,
+    )
+    .await;
+    // 不论 upload 成败，先清理临时文件（如果有）
+    if let Some(tmp) = tmp_to_clean {
+        let _ = tokio::fs::remove_file(&tmp).await;
+    }
+    let uploaded = upload_result?;
+
     let media_item = build_voice_item(&uploaded, encode_type, duration_ms);
 
     let client_id = client_id.map_or_else(generate_client_id, String::from);
@@ -105,14 +132,73 @@ pub(crate) async fn send_voice_file(
     Ok(SendResult { message_id: client_id })
 }
 
-/// Map an audio filename to its 微信 voice `encode_type`. Defaults to
-/// `VoiceEncodeType::Mp3` for unknown audio formats since 微信 accepts mp3 natively.
+/// 决定 send_voice_file 实际要上传的字节路径 + encode_type。
+///
+/// 返回 (upload_path, tmp_path_to_clean_after, encode_type)：
+/// - 已是 SILK → 原文件路径，无 tmp
+/// - WAV 转码成功 → tmp 文件路径（caller 清理），encode_type=Silk
+/// - 否则 → 原文件路径，按扩展名映射的 encode_type（fallback、可能不显示）
+async fn prepare_voice_upload(
+    original_path: &Path,
+    filename: &str,
+    bytes: &[u8],
+) -> Result<(std::path::PathBuf, Option<std::path::PathBuf>, VoiceEncodeType)> {
+    use crate::media::voice_transcode;
+
+    // 1) 已是 SILK V3 → 直接传
+    if voice_transcode::is_silk_format(bytes) {
+        return Ok((original_path.to_path_buf(), None, VoiceEncodeType::Silk));
+    }
+
+    // 2) 非 SILK → 尝试 wav→silk（仅 voice-transcode feature 启用）
+    if let Some(silk_bytes) = voice_transcode::wav_to_silk(bytes) {
+        // 写临时文件
+        let mut tmp_name = String::from("weixin-voice-");
+        let n: u64 = rand::random();
+        use std::fmt::Write;
+        let _ = write!(tmp_name, "{n:016x}.silk");
+        let tmp = std::env::temp_dir().join(tmp_name);
+        if let Err(e) = tokio::fs::write(&tmp, &silk_bytes).await {
+            tracing::warn!(
+                "send_voice_file: 写 silk 临时文件失败 ({}): {e}",
+                tmp.display()
+            );
+            // 回退：按扩展名映射 encode_type 上传原文件
+            return Ok((
+                original_path.to_path_buf(),
+                None,
+                voice_encode_type_from_filename(filename),
+            ));
+        }
+        tracing::debug!(
+            "send_voice_file: wav→silk 转码成功 ({} bytes → {} bytes, tmp={})",
+            bytes.len(),
+            silk_bytes.len(),
+            tmp.display()
+        );
+        return Ok((tmp.clone(), Some(tmp), VoiceEncodeType::Silk));
+    }
+
+    // 3) 转码不可用（feature 关 / 非 wav / encode 失败）→ 按扩展名映射 encode_type
+    tracing::warn!(
+        "send_voice_file: 输入既非 SILK 也无法 wav→silk 转码，按扩展名 encode_type 上传 {filename}（微信端可能不显示语音气泡）"
+    );
+    Ok((
+        original_path.to_path_buf(),
+        None,
+        voice_encode_type_from_filename(filename),
+    ))
+}
+
+/// Map an audio filename to its 微信 voice `encode_type`. **仅作 fallback**——
+/// 实测微信只识别 Silk (6) 的语音气泡；本映射保留只为兼容老调用（例如
+/// 已经是 silk 的文件用 .silk 扩展名上传时跳过转码路径，但实际 silk 检测
+/// 是看 `is_silk_format` 字节头不是扩展名）。
 fn voice_encode_type_from_filename(filename: &str) -> VoiceEncodeType {
     match get_mime_from_filename(filename) {
         "audio/amr" => VoiceEncodeType::Amr,
         "audio/ogg" => VoiceEncodeType::OggSpeex,
         "audio/wav" => VoiceEncodeType::Pcm,
-        // audio/mpeg 与未知格式都用 Mp3（微信原生接受 mp3）
         _ => VoiceEncodeType::Mp3,
     }
 }

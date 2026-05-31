@@ -14,6 +14,7 @@ categories = ["api-bindings", "asynchronous"]
 
 [dependencies]
 silk-rs = { version = "0.2", optional = true }
+hound = { version = "3", optional = true }
 regex = "1"
 tokio = { version = "1", features = ["full"] }
 reqwest = { version = "0.13", default-features = false, features = ["json", "stream"] }
@@ -35,7 +36,7 @@ url = "2"
 urlencoding = "2"
 
 [features]
-voice-transcode = ["silk-rs"]
+voice-transcode = ["silk-rs", "hound"]
 
 [dev-dependencies]
 anyhow = "1"
