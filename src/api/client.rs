@@ -47,6 +47,42 @@ fn is_retryable_transport(err: &Error) -> bool {
     matches!(err, Error::Http(e) if e.is_timeout() || e.is_connect())
 }
 
+/// Business-level status fields carried in an otherwise HTTP-200 response.
+const BUSINESS_CODE_FIELDS: [&str; 2] = ["ret", "errcode"];
+
+/// The iLink Bot API signals business failures with **HTTP 200** — the real
+/// status lives in the body's `ret` / `errcode`, with `errmsg` giving the
+/// reason. Judging by HTTP status alone turns an explicit server-side refusal
+/// ("this message was not delivered") into a silent success: the caller never
+/// learns the message vanished.
+///
+/// A body without these fields is treated as success — some endpoints return
+/// bare payloads on the happy path. A body that is not JSON at all is left to
+/// the caller's own deserialization, which reports the mismatch with context.
+fn check_business_code(raw: &str) -> Result<()> {
+    let Ok(value) = serde_json::from_str::<serde_json::Value>(raw) else {
+        return Ok(());
+    };
+    for field in BUSINESS_CODE_FIELDS {
+        let Some(code) = value.get(field).and_then(serde_json::Value::as_i64) else {
+            continue;
+        };
+        if code == 0 {
+            continue;
+        }
+        let errmsg = value
+            .get("errmsg")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_owned();
+        return Err(Error::Api {
+            errcode: i32::try_from(code).unwrap_or(i32::MAX),
+            errmsg,
+        });
+    }
+    Ok(())
+}
+
 /// Low-level HTTP client for all iLink Bot API endpoints.
 pub struct HttpApiClient {
     base_url: String,
@@ -156,6 +192,7 @@ impl HttpApiClient {
                 errmsg: raw,
             });
         }
+        check_business_code(&raw)?;
         Ok(serde_json::from_str(&raw)?)
     }
 
